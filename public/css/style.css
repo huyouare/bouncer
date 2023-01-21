@@ -83,6 +83,7 @@ button {
     border-right: 2px solid transparent;
     box-sizing: border-box;
     animation: rotation 1s linear infinite;
+    display: flex;
 }
 
 @keyframes rotation {

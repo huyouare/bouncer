@@ -13,7 +13,8 @@ const CONFIG = {
     },
     VIEWPORT: {width: 1080, height: 1024}
 };
-
+WORKING_BUFFER = ""
+STORAGE_BUFFER = ""
 const COMMANDS = {
     "NAV": async (url) => { // Open tab & navigate to `url`
         let page = await browser.newPage();
@@ -22,11 +23,20 @@ const COMMANDS = {
         // page.setDefaultNavigationTimeout(3_000);
         // await page.screenshot({path: `${__dirname}/screenshot.png`});
         
-    }
+    },
+    "STORE": async (url) => {
+        STORAGE_BUFFER += WORKING_BUFFER + '\n';
+    },
+    "SUMMARIZE": async () => {
+        
+    },
+
+    
 };
 
 
 const initBrowser = async () => await puppeteer.launch(CONFIG.BROWSER);
+const closeBrowser = async () => await browser.close();
 const getPageURLs = async () => (await browser.pages()).map(page => page.url());
 
 /* Format:
@@ -41,7 +51,7 @@ async function runCommands(str) {
         if (!/^<(.*?)>(.*?)$/.test(line)) continue; // unable to parse line
         let idx = line.indexOf('>');
         let instruction = line.substr(0, idx).slice(1);
-        let params = line.substr(idx + 1).split(delimiter);
+        let params = line.substr(idx + 1).split(delimiter).map(p => p.trim());
 
         // Run command
         await COMMANDS[instruction].call(null, ...params);
@@ -67,4 +77,4 @@ async function runCommands(str) {
     }, 3_000)
 })();
 
-module.exports = { initBrowser };
+module.exports = { initBrowser, closeBrowser };
