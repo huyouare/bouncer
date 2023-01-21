@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer');
-let browser, page;
+let browser;
 
 // let status = {};
 
@@ -15,8 +15,8 @@ const CONFIG = {
 };
 
 const COMMANDS = {
-    "NAV": async (url) => {
-        // Navigate active page to specified `url`
+    "NAV": async (url) => { // Open tab & navigate to `url`
+        let page = await browser.newPage();
         await page.goto(url);
     }
 };

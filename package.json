@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/huyouare/bouncer#readme",
   "dependencies": {
+    "dotenv": "^16.0.3",
     "openai": "^3.1.0",
     "puppeteer": "^19.5.2"
   }

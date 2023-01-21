@@ -1,0 +1,5 @@
+NAV X, open a new tab and navigate to X
+LD 
+STR
+SEARCH
+
