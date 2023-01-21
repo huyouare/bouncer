@@ -1,11 +1,96 @@
 require('dotenv').config();
 
+/*
+Notes:
+Download files from the computer
+Play a song on X website - may be difficult
+Find a funny youtube video for me to watch
+Get the lyrics for X song
+Find me an offline game for my Android phone to play on a airplane 
+*/
+
 const { Configuration, OpenAIApi } = require("openai");
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
+
+const createPromptBouncer = (browserContent, objective, currentUrl, previousCommand) => `
+        You are an agent controlling a browser. You are given:
+
+            (1) an objective that you are trying to achieve
+            (2) a working buffer (for temporary storage of text)
+            (3) a storage buffer (for building the response to the user)
+
+        Your goal is to achieve the objective using a sequence of commands.
+        You must add comments (prefixed by "#") to explain your reasoning for each action.
+
+        You can issue these commands:
+            <NAV> "URL" - navigate to the specified URL
+            <OPENEMAIL> INDEX - open the the email at index INDEX and store contents in the working buffer
+            <STORE> - append the working buffer to the storage buffer
+            <SUMMARIZE> - summarize the text in the working buffer
+            <OUTPUT> - output text stored in the storage buffer
+            // <LOAD> - copy storage buffer to working buffer
+            // <MAP> operation - assuming the working buffer has a list of items, it applies the operation to each element in the list
+            
+        Here are some examples:
+
+        EXAMPLE 1:
+        ==================================================
+        OBJECTIVE: Summarize my last 5 emails from yesterday
+        COMMANDS:
+        # navigate to gmail to open emails
+        NAV "gmail.com"
+        # Open the first email, then summarize, then store the summary into the text buffer
+        OPENEMAIL 0
+        SUMMARIZE
+        STORE
+        # Repeat the process with the second email
+        OPENEMAIL 1
+        SUMMARIZE
+        STORE
+        # repeat for the third, fourth, and fifth email
+        OPENEMAIL 2
+        SUMMARIZE
+        STORE
+        OPENEMAIL 3
+        SUMMARIZE
+        STORE
+        OPENEMAIL 4
+        SUMMARIZE
+        STORE
+        # all of the summarized emails have been stored in the text buffer, so we can now output to the user
+        OUTPUT 
+        ==================================================
+
+        The objective is below. Reply with your next command to the browser.
+
+        OBJECTIVE: ${objective}
+        COMMANDS:
+        `;
+
+async function query_model(browserContent, objective, currentUrl, previousCommand) {
+
+    const completion = await openai.createCompletion    ({
+        model: "text-davinci-003", // codex model: code-davinci-002
+        prompt: createPromptBouncer(browserContent, objective, currentUrl, previousCommand),
+    });
+
+    return completion.data.choices[0].text;
+}
+
+async function test() {
+    response = await query_model('', 'Summarize my last 5 emails from yesterday', '', '');
+    console.log(response);
+}
+
+test();
+
+
+
+
 
 const createPromptNatbot = (browserContent, objective, currentUrl, previousCommand) => `
         You are an agent controlling a browser. You are given:
@@ -144,105 +229,3 @@ const createPromptNatbot = (browserContent, objective, currentUrl, previousComma
         PREVIOUS COMMAND: ${previousCommand}
         YOUR COMMAND:
         `;
-
-const createPromptBouncer = (browserContent, objective, currentUrl, previousCommand) => `
-        You are an agent controlling a browser. You are given:
-
-            (1) an objective that you are trying to achieve
-            (2) the URL of your current web page
-            (3) a simplified text description of what's visible in the browser window (more on that below)
-
-        You can issue these commands:
-            SCROLL UP - scroll up one page
-            SCROLL DOWN - scroll down one page
-            CLICK X - click on a given element. You can only click on links, buttons, and inputs!
-            TYPE X "TEXT" - type the specified text into the input with id X
-            TYPESUBMIT X "TEXT" - same as TYPE above, except then it presses ENTER to submit the form
-
-        The format of the browser content is highly simplified; all formatting elements are stripped.
-        Interactive elements such as links, inputs, buttons are represented like this:
-
-                <link id=1>text</link>
-                <button id=2>text</button>
-                <input id=3>text</input>
-
-        Images are rendered as their alt text like this:
-
-                <img id=4 alt=""/>
-
-        Based on your given objective, issue whatever command you believe will get you closest to achieving your goal.
-        You always start on Google; you should submit a search query to Google that will take you to the best page for
-        achieving your objective. And then interact with that page to achieve your objective.
-
-        If you find yourself on Google and there are no search results displayed yet, you should probably issue a command 
-        like "TYPESUBMIT 7 "search query"" to get to a more useful page.
-
-        Then, if you find yourself on a Google search results page, you might issue the command "CLICK 24" to click
-        on the first link in the search results. (If your previous command was a TYPESUBMIT your next command should
-        probably be a CLICK.)
-
-        Don't try to interact with elements that you can't see.
-
-        Here are some examples:
-
-        EXAMPLE 1:
-        ==================================================
-        CURRENT BROWSER CONTENT:
-        ------------------
-        <link id=1>About</link>
-        <link id=2>Store</link>
-        <link id=3>Gmail</link>
-        <link id=4>Images</link>
-        <link id=5>(Google apps)</link>
-        <link id=6>Sign in</link>
-        <img id=7 alt="(Google)"/>
-        <input id=8 alt="Search"></input>
-        <button id=9>(Search by voice)</button>
-        <button id=10>(Google Search)</button>
-        <button id=11>(I'm Feeling Lucky)</button>
-        <link id=12>Advertising</link>
-        <link id=13>Business</link>
-        <link id=14>How Search works</link>
-        <link id=15>Carbon neutral since 2007</link>
-        <link id=16>Privacy</link>
-        <link id=17>Terms</link>
-        <text id=18>Settings</text>
-        ------------------
-        OBJECTIVE: Find a 2 bedroom house for sale in Anchorage AK for under $750k
-        CURRENT URL: https://www.google.com/
-        YOUR COMMAND: 
-        <NAV>Open google.com
-        <TYPE>
-        <MAP>
-        <SEARCH>
-        ==================================================
-
-        The current browser content, objective, and current URL follow. Reply with your next command to the browser.
-
-        CURRENT BROWSER CONTENT:
-        ------------------
-        ${browserContent}
-        ------------------
-
-        OBJECTIVE: ${objective}
-        CURRENT URL: ${currentUrl}
-        PREVIOUS COMMAND: ${previousCommand}
-        YOUR COMMAND:
-        `;
-
-async function query_model(browserContent, objective, currentUrl, previousCommand) {
-
-    const completion = await openai.createCompletion({
-        model: "text-davinci-003", // codex model: code-davinci-002
-        prompt: createNatbotPrompt(browserContent, objective, currentUrl, previousCommand),
-    });
-
-    return completion.data.choices[0].text;
-}
-
-async function test() {
-    response = await query_model('', 'Go to google.com', 'google.com', '');
-    console.log(response);
-}
-
-test();

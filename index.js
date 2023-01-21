@@ -17,7 +17,11 @@ const CONFIG = {
 const COMMANDS = {
     "NAV": async (url) => { // Open tab & navigate to `url`
         let page = await browser.newPage();
-        await page.goto(url);
+        await page.goto(url); // todo: waitUntil: load?
+
+        // page.setDefaultNavigationTimeout(3_000);
+        // await page.screenshot({path: `${__dirname}/screenshot.png`});
+        
     }
 };
 
@@ -47,13 +51,13 @@ async function runCommands(str) {
 (async () => {
     browser = await initBrowser();
 
-    page = await browser.newPage();
+    // page = await browser.newPage();
     
-    await page.setViewport(CONFIG.VIEWPORT);
+    // await page.setViewport(CONFIG.VIEWPORT);
 
     // await page.goto("https://scale.com");
     await runCommands(`
-<NAV> https://scale.com
+<NAV> https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html
     `);
 
     console.log(await getPageURLs());
@@ -62,3 +66,5 @@ async function runCommands(str) {
         await browser.close();
     }, 3_000)
 })();
+
+module.exports = { initBrowser };
