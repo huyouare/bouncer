@@ -57,5 +57,12 @@ async function run() {
             }
             lastText = text;
         }
-    })();
+    }
+
+    read()
+      .then(() => {
+          loading = false;
+          button.innerText = 'Take action!';
+          button.classList.remove('loading');
+      });
 };
