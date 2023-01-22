@@ -19,6 +19,8 @@ button.onclick = async () => {
     });
     let res = await req.text();
 
+    document.body.children[0].innerHTML = res;
+
     loading = false;
     button.innerText = 'Take action!';
     button.classList.remove('loading');
