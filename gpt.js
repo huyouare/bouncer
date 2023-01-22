@@ -6,7 +6,7 @@ Download files from the computer
 Play a song on X website - may be difficult
 Find a funny youtube video for me to watch
 Get the lyrics for X song
-Find me an offline game for my Android phone to play on a airplane 
+Find me an offline game for my Android phone to play on a airplane
 Online booking: scheduling appointments and reservations for services such as hair salon, spa, or fitness classes.
 */
 
@@ -107,19 +107,6 @@ OUTPUT
 END
 ==================================================
 
-EXAMPLE 3:
-==================================================
-OBJECTIVE: Summarize the top 5 posts of HackerNews
-COMMANDS:
-BEGIN
-# navigate to HN website
-NAV https://news.ycombinator.com/
-...
-# all of the summarized emails have been stored in the text buffer, so we can now output to the user
-OUTPUT
-END
-==================================================
-
 The objective is below. Reply with your next command to the browser.
 
 OBJECTIVE: ${objective}
@@ -151,7 +138,7 @@ async function runCompletion(prompt) {
         model: "text-davinci-003",
         prompt: prompt,
     });
-    
+
     return res.data.choices[0].text;
 }
 
