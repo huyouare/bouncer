@@ -1,14 +1,15 @@
 let textarea = document.querySelector('textarea');
-let button = document.getElementById('action-button');
+let button = document.querySelector('button');
 
 let loading = false;
 
-button.onclick = async () => {
+document.querySelector('button').onclick = run;
+async function run() {
     if (loading) return;
     loading = true;
 
-    button.classList.add('loading');
-    button.innerHTML = '<span class="loader"></span>';
+    document.querySelector('button').classList.add('loading');
+    document.querySelector('button').innerHTML = '<span class="loader"></span>';
 
     let task = textarea.value;
     let req = await fetch('/action', {
@@ -23,16 +24,38 @@ button.onclick = async () => {
     let reader = stream.getReader();
 
     await (async function read() {
+        let idx = 0;
+        let lastText;
         while (true) {
             const {done, value} = await reader.read();
+            let text = new TextDecoder().decode(value);
+            console.log(done, text)
             if (done) {
+                document.body.children[0].innerHTML += text ? text : lastText;
+
                 console.log("Stream closed");
                 loading = false;
-                button.innerText = 'Take action!';
-                button.classList.remove('loading');
+                document.querySelector('button').innerText = 'Take action!';
+                document.querySelector('button').classList.remove('loading');
+                document.querySelector('button').onclick = run;
                 break;
+            } else {
+                if (text.substr(0,8) == 'ACTIONS:') {
+                    let actions = text.substr(8);
+                    let els = actions.split('\n').filter(x => x.indexOf('#') != 0).filter(x => x).map(x => `<span>${x}</span>`).join('');
+                    document.querySelector('div.textarea-container div').innerHTML = els;
+                } else if (text.substr(0,7) == 'ACTION:') {
+                    console.log(idx);
+                    // let action = text.substr(7);
+                    let els = [...document.querySelectorAll('div.textarea-container div span')];
+                    for (let i in els) {
+                        let el = els[i];
+                        el.style.color = parseInt(i) === idx ? 'yellow' : 'white';
+                    }
+                    idx += text.match(/ACTION:/g)?.length;
+                }
             }
-            document.body.children[0].innerHTML += new TextDecoder().decode(value);
+            lastText = text;
         }
     })();
 };

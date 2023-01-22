@@ -64,7 +64,6 @@ const COMMANDS = {
         const summary = await runCompletion("Summarize the following text: \n" + WORKING_BUFFER);
 
         WORKING_BUFFER = summary;
-
     },
     "MAP": async (func) => {
         const mapped = await runCompletion( "Apply the following function to each item in the list below:\nFUNCTION:" 
@@ -81,18 +80,21 @@ const COMMANDS = {
     },
     "OUTPUT": async (prompt, res) => {
         let output = await runCompletion("Generate the response to the following prompt: \n" + prompt + "\n With the following information" + STORAGE_BUFFER + "\n RESPONSE:");
-        res.send(output);
+        setTimeout(() => {
+            res.write(output);
+            res.end();
+        }, 200);
     },
-    "TWITTERACCOUNT": async (name, res) => {
-        // Gets the Twitter account of "Firstname Lastname". Works for famous people with unique names.
-        let output = await runCompletion("What is the twitter username of " + name + "? Return only one word, the twitter username of this person, preceded by @.");
-        res.send(output);
-    },
-    "GETAUTHOR": async (email, res) => {
-        // Gets the author of an email message.
-        let output = await runCompletion("Find the author of the following email message: \n" + email + "\nAUTHOR:");
-        res.send(output);
-    },
+    // "TWITTERACCOUNT": async (name, res) => {
+    //     // Gets the Twitter account of "Firstname Lastname". Works for famous people with unique names.
+    //     let output = await runCompletion("What is the twitter username of " + name + "? Return only one word, the twitter username of this person, preceded by @.");
+    //     res.send(output);
+    // },
+    // "GETAUTHOR": async (email, res) => {
+    //     // Gets the author of an email message.
+    //     let output = await runCompletion("Find the author of the following email message: \n" + email + "\nAUTHOR:");
+    //     res.send(output);
+    // },
     "GOOGLE": async (searchTerm) => {
         let page = await browser.newPage();
         await page.goto(`https://www.google.com/search?q=${searchTerm}`);
@@ -106,7 +108,7 @@ const COMMANDS = {
     },
     "YOUTUBE": async (searchTerm) => {
         let page = await browser.newPage();
-        await page.goto(`https://www.google.com/search?q=${searchTerm}%20site:www.youtube.com/watch`);
+        await page.goto(`https://www.google.com/search?q=${searchTerm}%20most%20%recent%20video%20site:www.youtube.com/watch`);
     
         let urls = await page.evaluate(() => {
             let results = [...document.querySelectorAll('h3.LC20lb')];
@@ -152,8 +154,11 @@ async function performTask(task, res) {
     // res.send(`ack: ${task}`);
     console.log('Querying model for task:', task);
     const response = await query_model('', task, '', '');
+    res.write(`ACTIONS:${response}`);
     console.log('Instructions:', response);
-    await runCommands(response, res);
+    setTimeout(async () => {
+        await runCommands(response, res);
+    }, 50);
 }
 
 const initBrowser = async () => {
@@ -187,6 +192,7 @@ async function runCommands(str, res) {
         if (instruction === 'OUTPUT') params.push(res);
 
         // Run command
+        res.write(`ACTION:${instruction}`);
         try {
             if (!COMMANDS[instruction]) {
                 console.log(`Instruction "${instruction}" does not exist. Skipping..`);

@@ -263,6 +263,100 @@ async function runCompletion(prompt) {
 
 // test();
 
+async function query_spellbook(browserContent, objective, currentUrl, previousCommand) {
+    const my_prompt = createPromptBouncerV1_1('', objective, '', '');
+
+    const res = await fetch('https://dashboard.scale.com/spellbook/api/app/yw2l3rkb', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic cld6sx13300ngq11awzqg66yb'
+        },
+        // body: '{"input": ""}',
+        body: JSON.stringify({
+            'input': my_prompt
+        })
+    })
+
+    if (res.ok) {
+        const data = await res.json();
+        console.log(data.text);
+    }
+}
+
+query_spellbook('', 'Summarize the last 3 emails', '', '');
 
 module.exports = { runCompletion, query_model };
 
+
+const createPromptBouncerV3 = (browserContent, objective, currentUrl, previousCommand) => `
+You are a powerful language model agent controlling a browser.
+Your goal is to produce the provided objective to completion.
+
+You are given:
+    (1) an objective that you are trying to achieve
+    (2) a working buffer (for temporary storage of text)
+    (3) a storage buffer (for building the response to the user)
+
+Your goal is to achieve the objective using a sequence of commands.
+The first command must be BEGIN and the last command must be END.
+You should not use any commands that are not listed below.
+You must add comments (prefixed by "#") to explain your reasoning for each action.
+
+You can ONLY issue these commands:
+    - <BEGIN> - start the sequence of commands
+    - <NAV> "URL" - navigate to the specified URL
+    - <OPENEMAIL> INDEX - open the the email at index INDEX and store contents in the working buffer
+    - <DETECTSPAM> - classify the the selected email as spam
+    - <STORE> - append the working buffer to the storage buffer
+    - <SUMMARIZE> - summarize the text in the working buffer
+    - <OUTPUT> OBJECTIVE - output text stored in the storage buffer. Needs to begin with the objective provided.
+    - <LOAD> - copy storage buffer to working buffer
+    - <MAP> operation - assuming the working buffer has a list of items, it applies the operation to each element in the list
+    - <FILTER> - given a list of items, filter the list according to a given filter criteria
+    - <GOOGLE> term - return a list of the first 5 URLs for the google search 'term'
+    - <YOUTUBE> term - return a relevant YouTube video
+    - <END> - finish the sequence of commands
+If 
+
+Here are some examples:
+EXAMPLE 1:
+OBJECTIVE: Summarize my last 3 emails from yesterday
+COMMANDS:
+BEGIN
+# navigate to gmail to open emails
+NAV https://mail.google.com/mail/u/0/h/
+# Open the first email, then summarize, then store the summary into the text buffer
+# emails are sorted in reverse chronological order, with 0 being the most recent (aka last) email, 1 being second most recent, etc..
+OPENEMAIL 0
+SUMMARIZE
+STORE
+# Repeat the process with the second email
+OPENEMAIL 1
+SUMMARIZE
+STORE
+# repeat for the third out of 3 emails
+OPENEMAIL 2
+SUMMARIZE
+STORE
+# all of the summarized emails have been stored in the text buffer, so we can now output to the user
+OUTPUT Summarize my last 3 emails from yesterday
+END
+
+EXAMPLE 2:
+OBJECTIVE: Return the first 3 results for the google search Scale AI reworded like a pirate
+COMMANDS:
+BEGIN
+# get the names of the first 5 results in working memory
+GOOGLE ScaleAI
+# filter working memory to be the first three items
+FILTER first three items
+# convert the first three items to pirate speak
+MAP pirate speak
+STORE
+OUTPUT
+END
+
+EXAMPLE 3:
+OBJECTIVE: ${objective}
+COMMANDS:`;
