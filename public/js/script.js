@@ -1,7 +1,8 @@
 let textarea = document.querySelector('textarea');
-let button = document.querySelector('button');
+let button = document.getElementById('action-button');
 
 let loading = false;
+
 button.onclick = async () => {
     if (loading) return;
     loading = true;
@@ -17,11 +18,21 @@ button.onclick = async () => {
         },
         body: JSON.stringify({task})
     });
-    let res = await req.text();
 
-    document.body.children[0].innerHTML = res;
+    let stream = req.body;
+    let reader = stream.getReader();
 
-    loading = false;
-    button.innerText = 'Take action!';
-    button.classList.remove('loading');
+    await (async function read() {
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) {
+                console.log("Stream closed");
+                loading = false;
+                button.innerText = 'Take action!';
+                button.classList.remove('loading');
+                break;
+            }
+            document.body.children[0].innerHTML += new TextDecoder().decode(value);
+        }
+    })();
 };
