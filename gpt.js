@@ -252,7 +252,7 @@ async function runCompletion(prompt) {
         prompt: prompt,
         max_tokens
     });
-    
+
     return res.data.choices[0].text;
 }
 
@@ -262,29 +262,6 @@ async function runCompletion(prompt) {
 // }
 
 // test();
-
-async function query_spellbook(browserContent, objective, currentUrl, previousCommand) {
-    const my_prompt = createPromptBouncerV1_1('', objective, '', '');
-
-    const res = await fetch('https://dashboard.scale.com/spellbook/api/app/yw2l3rkb', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic cld6sx13300ngq11awzqg66yb'
-        },
-        // body: '{"input": ""}',
-        body: JSON.stringify({
-            'input': my_prompt
-        })
-    })
-
-    if (res.ok) {
-        const data = await res.json();
-        console.log(data.text);
-    }
-}
-
-query_spellbook('', 'Summarize the last 3 emails', '', '');
 
 module.exports = { runCompletion, query_model };
 
