@@ -104,6 +104,17 @@ const COMMANDS = {
 
         WORKING_BUFFER = urls.slice(0, 5).join('\n'); // Store the first 5 URLs in the WORKING_BUFFER
     },
+    "YOUTUBE": async (searchTerm) => {
+        let page = await browser.newPage();
+        await page.goto(`https://www.google.com/search?q=${searchTerm}%20site:www.youtube.com/watch`);
+    
+        let urls = await page.evaluate(() => {
+            let results = [...document.querySelectorAll('h3.LC20lb')];
+            return results.map(result => result.innerText.trim());
+        });
+
+        WORKING_BUFFER = urls.slice(0, 5).join('\n'); // Store the first 5 URLs in the WORKING_BUFFER
+    },
     "OPENEMAIL": async (nthEmail) => { // assumes *exactly* one gmail page open
         try {
             console.log(`nthEmail: ${nthEmail}`);
@@ -120,6 +131,11 @@ const COMMANDS = {
         return;
     },
     "END": async () => {
+        let pages = await browser.pages();
+        for (let page of pages) {
+            if (page.url() == 'about:blank') continue;
+            page.close();
+        }
         return;
     }
 

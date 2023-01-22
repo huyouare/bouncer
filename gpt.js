@@ -41,8 +41,9 @@ You can ONLY issue these commands:
     - <OUTPUT> OBJECTIVE - output text stored in the storage buffer. Needs to begin with the objective provided.
     - <LOAD> - copy storage buffer to working buffer
     - <MAP> operation - assuming the working buffer has a list of items, it applies the operation to each element in the list
-    - <FILTER> -  given a list of items, filter the list according to a given filter criteria
+    - <FILTER> - given a list of items, filter the list according to a given filter criteria
     - <GOOGLE> term - return a list of the first 5 URLs for the google search 'term'
+    - <YOUTUBE> term - return a relevant YouTube video
     - <END> - finish the sequence of commands
 If 
 
