@@ -6,7 +6,7 @@ Download files from the computer
 Play a song on X website - may be difficult
 Find a funny youtube video for me to watch
 Get the lyrics for X song
-Find me an offline game for my Android phone to play on a airplane 
+Find me an offline game for my Android phone to play on a airplane
 Online booking: scheduling appointments and reservations for services such as hair salon, spa, or fitness classes.
 */
 
@@ -251,7 +251,7 @@ async function runCompletion(prompt) {
         prompt: prompt,
         max_tokens
     });
-    // console.log(`runCompletion output: ${res.data.choices[0].text}`);
+    
     return res.data.choices[0].text;
 }
 
