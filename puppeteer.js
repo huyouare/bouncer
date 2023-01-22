@@ -1,6 +1,6 @@
 const fs = require('fs').promises;
 
-const { runCompletion } = require('./gpt');
+const { runCompletion, query_model } = require('./gpt');
 const puppeteer = require('puppeteer');
 let browser;
 
@@ -16,8 +16,31 @@ const CONFIG = {
     },
     VIEWPORT: {width: 1080, height: 1024}
 };
-WORKING_BUFFER = ""
-STORAGE_BUFFER = ""
+WORKING_BUFFER = "";
+STORAGE_BUFFER = "";
+
+const SCRAPERS = {
+    "GMAIL_EMAIL": async (page, nthEmail) => {
+        let homeUrl = page.url();
+        let url = await page.evaluate(nthEmail => {
+            let emails = [...document.querySelector('table[bgcolor="#C3D9FF"]').nextElementSibling.firstChild.children];
+            emails.splice(-1);
+            return emails[nthEmail].querySelector('a').href;
+        }, nthEmail);
+        await page.goto(url); // open email
+        let emailInfo = await page.evaluate(() => {
+            let subject = document.querySelector('font[size="+1"]');
+            let contentBody = subject.parentElement.parentElement.parentElement.parentElement.parentElement.nextElementSibling.firstChild.firstChild.firstChild.children[1].firstChild;
+            // TODO: handle emails with replies
+            let sender = contentBody.children[0].innerText;
+            let messageContent = contentBody.children[3].innerText;
+            return {subject: subject.innerText, sender, messageContent};
+        });
+        await page.goto(homeUrl); // return to original page
+        return emailInfo;
+    }
+};
+
 const COMMANDS = {
     "NAV": async (url) => { // Open tab & navigate to `url`
         let page = await browser.newPage();
@@ -37,32 +60,24 @@ const COMMANDS = {
         WORKING_BUFFER = STORAGE_BUFFER;
     },
     "SUMMARIZE": async () => {
-        const summary = await openai.createCompletion({
-            model: "text-davinci-003", // codex model: code-davinci-002
-            prompt: "Summarize the following text: \n" + WORKING_BUFFER,
-        });
+        // runCompletion
+        const summary = await runCompletion("Summarize the following text: \n" + WORKING_BUFFER);
 
-        WORKING_BUFFER = summary.data.choices[0].text;
+        WORKING_BUFFER = summary;
 
     },
     "MAP": async (func) => {
-        const mapped = await openai.createCompletion    ({
-            model: "text-davinci-003", // codex model: code-davinci-002
-            prompt: "Apply the following function to each item in the list below:\nFUNCTION:" 
-                + func + "\nLIST:" + WORKING_BUFFER + "\nMAPPED LIST:"
-        });
-        resp = mapped.data.choices[0].text;
-        WORKING_BUFFER = resp; 
+        const mapped = await runCompletion( "Apply the following function to each item in the list below:\nFUNCTION:" 
+        + func + "\nLIST:" + WORKING_BUFFER + "\nMAPPED LIST:");
+
+        WORKING_BUFFER = mapped;
     },
     
     "FILTER": async (criteria) => {
-        const filtered = await openaicreateCompletion ({
-            model: "text-davinci-003",
-            prompt: "Filter the following list of items according to the criteria below.\nCRITERIA:" 
-                + criteria +"\nLIST:"+WORKING_BUFFER+"\nFILTERED:"
-        })
-        resp = filtered.data.choices[0].text;
-        WORKING_BUFFER = resp; 
+        const filtered = await runCompletion("Filter the following list of items according to the criteria below.\nCRITERIA:" 
+            + criteria + "\nLIST:" + WORKING_BUFFER + "\nFILTERED:");
+
+        WORKING_BUFFER = filtered;
     },
     "OUTPUT": async (prompt, res) => {
         let output = await runCompletion("Generate the response to the following prompt: \n" + prompt + "\n With the following information" + STORAGE_BUFFER + "\n RESPONSE:");
@@ -83,51 +98,46 @@ const COMMANDS = {
         await page.goto(`https://www.google.com/search?q=${searchTerm}`);
     
         let urls = await page.evaluate(() => {
-            let results = Array.from(document.querySelectorAll('.r a'));
-            return results.map(result => result.href);
+            let results = [...document.querySelectorAll('h3.LC20lb')];
+            return results.map(result => result.innerText.trim());
         });
-    
-        WORKING_BUFFER = urls.slice(0, 5); // Store the first 5 URLs in the WORKING_BUFFER
+
+        WORKING_BUFFER = urls.slice(0, 5).join('\n'); // Store the first 5 URLs in the WORKING_BUFFER
     },
     "OPENEMAIL": async (nthEmail) => { // assumes *exactly* one gmail page open
         try {
+            console.log(`nthEmail: ${nthEmail}`);
             let page = (await browser.pages()).filter(page => page.url().indexOf('google.com/mail/u') !== -1)[0];
-            let homeUrl = page.url();
-            let url = await page.evaluate(nthEmail => {
-                let emails = [...document.querySelector('table[bgcolor="#C3D9FF"]').nextElementSibling.firstChild.children];
-                emails.splice(-1);
-                return emails[nthEmail].querySelector('a').href;
-            }, nthEmail);
-            await page.goto(url); // open email
-            let {subect, sender, messageContent} = await page.evaluate(() => {
-                let subject = document.querySelector('font[size="+1"]');
-                let contentBody = subject.parentElement.parentElement.parentElement.parentElement.parentElement.nextElementSibling.firstChild.firstChild.firstChild.children[1].firstChild;
-                // TODO: handle emails with replies
-                let sender = contentBody.children[0].innerText;
-                let messageContent = contentBody.children[3].innerText;
-                return {subject: subject.innerText, sender, messageContent};
-            });
-            await page.goto(homeUrl); // return to original page
+            let {subject, sender, messageContent} = await SCRAPERS["GMAIL_EMAIL"](page, nthEmail);
 
-            WORKING_BUFFER += `Email #${nthEmail}\nSender: ${sender}\nSubject: ${subject}\nContent: ${messageContent}\n`;
-            console.log('changed working buffer. new working buffer:', WORKING_BUFFER);
+            WORKING_BUFFER = `Email #${nthEmail}\nSender: ${sender}\nSubject: ${subject}\nContent: ${messageContent}\n`;
+            // console.log('changed working buffer. new working buffer:', WORKING_BUFFER);
         } catch (e) {
             console.log(e);
         }
     },
+    "BEGIN": async () => {
+        return;
+    },
+    "END": async () => {
+        return;
+    }
 
-    
-
-    
 };
 
 async function performTask(task, res) {
     // <NAV> https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html
-    await runCommands(`
-    NAV https://mail.google.com/mail/u/0/h/
-    OPENEMAIL 0
-    OUTPUT this is a test prompt!`, res);
+    // await runCommands(`
+    // NAV https://mail.google.com/mail/u/0/h/
+    // OPENEMAIL 0
+    // SUMMARIZE
+    // STORE
+    // OUTPUT What is the content of my summarized email?`, res);
     // res.send(`ack: ${task}`);
+    console.log('Querying model for task:', task);
+    const response = await query_model('', task, '', '');
+    console.log('Instructions:', response);
+    await runCommands(response, res);
 }
 
 const initBrowser = async () => {
@@ -152,35 +162,25 @@ async function runCommands(str, res) {
         line = line.trim();
 
         // Parse command
-        if (!/^.*#.*$/.test(line)) continue; // unable to parse line
+        if (/^#/.test(line) || !line) continue; // comment or empty
         // let idx = line.indexOf('>');
         let idx = line.indexOf(' ')
-        let instruction = line.substr(0, idx).slice(1);
+        if (idx == -1) idx = line.length; // no params
+        let instruction = line.substr(0, idx);
         let params = line.substr(idx + 1).split(delimiter).map(p => p.trim());
         if (instruction === 'OUTPUT') params.push(res);
 
         // Run command
-        await COMMANDS[instruction].call(null, ...params);
+        try {
+            if (!COMMANDS[instruction]) {
+                console.log(`Instruction "${instruction}" does not exist. Skipping..`);
+                continue;
+            }
+            await COMMANDS[instruction].call(null, ...params);
+        } catch (e) {
+            console.log(`Error calling: ${instruction}`, e);
+        }
     }
 }
-
-// (async () => {
-    // browser = await initBrowser();
-
-    // page = await browser.newPage();
-    
-    // await page.setViewport(CONFIG.VIEWPORT);
-
-    // await page.goto("https://scale.com");
-//     await runCommands(`
-// <NAV> https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html
-//     `);
-
-    // console.log(await getPageURLs());
-
-//     setTimeout(async () => {
-//         await browser.close();
-//     }, 3_000)
-// })();
 
 module.exports = { initBrowser, closeBrowser, performTask };

@@ -18,15 +18,6 @@ app.get('/', (req, res) => {
     return res.sendFile('index.html', {root: `${__dirname}/public`});
 });
 
-app.post('/gpt_action', async (req, res) => {
-    let {objective} = req.body;
-    if (!objective) return res.sendStatus(400);
-    
-    const task = await gpt.query_model('', gpt.summarizeEmailPrompt, '', '');
-
-    await performTask(task, res);
-});
-
 app.post('/action', async (req, res) => {
     let {task} = req.body;
     if (!task) return res.sendStatus(400);
