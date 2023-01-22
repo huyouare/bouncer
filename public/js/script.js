@@ -22,17 +22,21 @@ button.onclick = async () => {
     let stream = req.body;
     let reader = stream.getReader();
 
-    await (async function read() {
+    async function read() {
         while (true) {
             const {done, value} = await reader.read();
             if (done) {
                 console.log("Stream closed");
-                loading = false;
-                button.innerText = 'Take action!';
-                button.classList.remove('loading');
                 break;
             }
             document.body.children[0].innerHTML += new TextDecoder().decode(value);
         }
-    })();
+    }
+
+    read()
+      .then(() => {
+          loading = false;
+          button.innerText = 'Take action!';
+          button.classList.remove('loading');
+      });
 };
